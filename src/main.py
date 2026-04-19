@@ -80,6 +80,14 @@ def generate_presentation(request: GenerateRequest):
         # Convert Pydantic models to dicts for generator
         steps_data = [step.model_dump() for step in request.steps]
         
+        # Debug: Log steps data structure
+        logger.info(f"Steps count: {len(steps_data)}")
+        for i, step in enumerate(steps_data[:2]):  # Log first 2 steps
+            logger.info(f"Step {i}: type={type(step)}, keys={list(step.keys()) if isinstance(step, dict) else 'N/A'}")
+            if isinstance(step, dict) and 'data' in step:
+                data = step['data']
+                logger.info(f"  data type: {type(data)}, keys={list(data.keys())[:5] if isinstance(data, dict) else 'N/A'}")
+        
         # Generate presentation
         ppt_gen.create_presentation(
             project_name=request.projectName,
@@ -98,8 +106,10 @@ def generate_presentation(request: GenerateRequest):
         )
         
     except Exception as e:
+        import traceback
         logger.error(f"Generation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"{str(e)} - Check server logs for details")
 
 @app.get("/download/{filename}")
 def download_file(filename: str):
