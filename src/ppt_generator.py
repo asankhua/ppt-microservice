@@ -16,6 +16,17 @@ logger = logging.getLogger(__name__)
 class PPTGenerator:
     """PowerPoint presentation generator"""
     
+    @staticmethod
+    def _ensure_list(data):
+        """Ensure data is a list, converting dict values or wrapping single items"""
+        if isinstance(data, dict):
+            return list(data.values()) if data else []
+        if isinstance(data, list):
+            return data
+        if data is None:
+            return []
+        return [data]
+    
     COLOR_SCHEMES = {
         "professional": {
             "primary": RGBColor(30, 64, 175),
@@ -60,6 +71,8 @@ class PPTGenerator:
         output_path: str
     ):
         """Create a complete presentation"""
+        # Ensure steps is a list (handles dict input from API)
+        steps = self._ensure_list(steps)
         
         colors = self.COLOR_SCHEMES.get(template, self.COLOR_SCHEMES["professional"])
         prs = Presentation()
@@ -127,7 +140,8 @@ class PPTGenerator:
         # Header
         self._add_header_bar(slide, "Presentation Overview", colors, prs.slide_width)
         
-        # Agenda items
+        # Agenda items - ensure steps is a list
+        steps = self._ensure_list(steps)
         y_pos = 1.8
         for i, step in enumerate(steps[:6]):
             step_name = step.get('stepName', f"Step {i+1}")
@@ -262,6 +276,7 @@ class PPTGenerator:
         if not isinstance(personas, list):
             personas = []
         
+        personas = self._ensure_list(personas)
         if not personas:
             self._add_text_box(slide, "", "No persona data available",
                              Inches(0.5), Inches(1.5), colors)
@@ -309,6 +324,7 @@ class PPTGenerator:
         if not isinstance(questions, list):
             questions = []
         
+        questions = self._ensure_list(questions)
         if not questions:
             self._add_text_box(slide, "", "No questions available",
                              Inches(0.5), Inches(1.5), colors)
@@ -345,8 +361,8 @@ class PPTGenerator:
             self._add_text_box(slide, "Market Overview:", overview,
                              Inches(0.5), Inches(1.3), colors)
         
-        competitors = data.get('competitors', [])
-        if isinstance(competitors, list) and competitors:
+        competitors = self._ensure_list(data.get('competitors', []))
+        if competitors:
             self._add_competitor_table(slide, competitors[:4], colors)
     
     def _add_competitor_table(self, slide, competitors: List[Dict], colors: Dict):
@@ -369,12 +385,12 @@ class PPTGenerator:
             row = i + 1
             table.cell(row, 0).text = comp.get('name', 'Unknown')
             
-            strengths = comp.get('strengths', [])
-            if isinstance(strengths, list):
+            strengths = self._ensure_list(comp.get('strengths', []))
+            if strengths:
                 table.cell(row, 1).text = "\n".join([f"• {s[:40]}" for s in strengths[:2]])
             
-            weaknesses = comp.get('weaknesses', [])
-            if isinstance(weaknesses, list):
+            weaknesses = self._ensure_list(comp.get('weaknesses', []))
+            if weaknesses:
                 table.cell(row, 2).text = "\n".join([f"• {w[:40]}" for w in weaknesses[:2]])
     
     def _add_features_slide(self, slide, data: Dict, colors: Dict):
@@ -383,6 +399,7 @@ class PPTGenerator:
         if not isinstance(features, list):
             features = []
         
+        features = self._ensure_list(features)
         if not features:
             self._add_text_box(slide, "PRD Content", str(data)[:300],
                              Inches(0.5), Inches(1.5), colors)
@@ -425,6 +442,7 @@ class PPTGenerator:
         if not isinstance(stories, list):
             stories = []
         
+        stories = self._ensure_list(stories)
         if not stories:
             self._add_text_box(slide, "", "No user stories available",
                              Inches(0.5), Inches(1.5), colors)
@@ -469,6 +487,7 @@ class PPTGenerator:
         if not isinstance(phases, list):
             phases = []
         
+        phases = self._ensure_list(phases)
         if not phases:
             self._add_text_box(slide, "", "No roadmap data available",
                              Inches(0.5), Inches(1.5), colors)
@@ -589,7 +608,8 @@ class PPTGenerator:
     
     def _add_bullet_list(self, slide, label: str, items: List, x, y, colors: Dict):
         """Add bullet list"""
-        if not isinstance(items, list):
+        items = self._ensure_list(items)
+        if not items:
             return
         
         if label:
