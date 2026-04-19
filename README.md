@@ -1,3 +1,12 @@
+---
+title: Product Pilot PPT Service
+emoji: 📊
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 8000
+---
+
 # Product Pilot - PPT Generation Microservice
 
 Professional PowerPoint presentation generation service built with Python, FastAPI, and python-pptx.
