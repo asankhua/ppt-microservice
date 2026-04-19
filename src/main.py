@@ -18,6 +18,22 @@ from ppt_generator import PPTGenerator
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+def normalize_data(obj):
+    """Recursively normalize data - convert dicts with numeric keys to lists"""
+    if isinstance(obj, dict):
+        # Check if keys are numeric (indicating array serialized as object)
+        keys = list(obj.keys())
+        if keys and all(str(k).isdigit() for k in keys):
+            # Convert to list, sort by key
+            return [normalize_data(obj[k]) for k in sorted(keys, key=int)]
+        else:
+            # Regular dict - normalize values
+            return {k: normalize_data(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [normalize_data(item) for item in obj]
+    else:
+        return obj
+
 app = FastAPI(
     title="PPT Generation Service",
     description="Professional PowerPoint generation API",
@@ -77,12 +93,12 @@ def generate_presentation(request: GenerateRequest):
         filename = f"{request.projectName.replace(' ', '_')}_{file_id}.pptx"
         output_path = os.path.join(tempfile.gettempdir(), filename)
         
-        # Convert Pydantic models to dicts for generator
-        steps_data = [step.model_dump() for step in request.steps]
+        # Convert Pydantic models to dicts and normalize (handle objects→arrays)
+        steps_data = [normalize_data(step.model_dump()) for step in request.steps]
         
         # Debug: Log steps data structure
         logger.info(f"Steps count: {len(steps_data)}")
-        for i, step in enumerate(steps_data[:2]):  # Log first 2 steps
+        for i, step in enumerate(steps_data[:2]):
             logger.info(f"Step {i}: type={type(step)}, keys={list(step.keys()) if isinstance(step, dict) else 'N/A'}")
             if isinstance(step, dict) and 'data' in step:
                 data = step['data']
