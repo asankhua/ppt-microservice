@@ -69,6 +69,14 @@ class PPTGenerator:
     def __init__(self):
         self.template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
     
+    def _ensure_list(self, data):
+        """Ensure data is a list for safe slicing"""
+        if isinstance(data, dict):
+            return list(data.values())
+        if not isinstance(data, list):
+            return []
+        return data
+    
     def create_presentation(
         self,
         project_name: str,
@@ -349,13 +357,13 @@ class PPTGenerator:
         
         # Success metrics
         if data.get('successMetrics'):
-            self._add_bullet_list(slide, "Success Metrics:", data['successMetrics'][:4], x_right, Inches(y_right), Inches(6), colors)
+            self._add_bullet_list(slide, "Success Metrics:", self._ensure_list(data['successMetrics'])[:4], x_right, Inches(y_right), Inches(6), colors)
     
     def _add_personas_slide(self, slide, data: Dict, colors: Dict):
         """User personas slide with cards"""
-        personas = data.get('personas', [])
+        personas = self._ensure_list(data.get('personas', []))
         if not personas and isinstance(data, list):
-            personas = data
+            personas = self._ensure_list(data)
         
         if not personas:
             self._add_text_box(slide, "", "No persona data available", Inches(0.5), Inches(1.5), colors)
@@ -367,7 +375,7 @@ class PPTGenerator:
         start_x = Inches(0.5)
         y_pos = Inches(1.3)
         
-        for i, persona in enumerate(personas[:3]):
+        for i, persona in enumerate(self._ensure_list(personas)[:3]):
             x_pos = start_x + (i * (card_width + gap))
             self._add_persona_card(slide, persona, x_pos, y_pos, card_width, colors)
     
@@ -406,7 +414,7 @@ class PPTGenerator:
             pain_frame.paragraphs[0].font.bold = True
             pain_frame.paragraphs[0].font.color.rgb = RGBColor(239, 68, 68)  # Red
             
-            for j, pain in enumerate(persona['painPoints'][:2]):
+            for j, pain in enumerate(self._ensure_list(persona.get('painPoints', []))[:2]):
                 pain_item_y = pain_y + Inches(0.25 + (j * 0.25))
                 pain_item = slide.shapes.add_textbox(x + Inches(0.3), pain_item_y, width - Inches(0.5), Inches(0.25))
                 pain_item_frame = pain_item.text_frame
@@ -424,7 +432,7 @@ class PPTGenerator:
             goal_frame.paragraphs[0].font.bold = True
             goal_frame.paragraphs[0].font.color.rgb = colors["accent"]
             
-            for j, goal in enumerate(persona['goals'][:2]):
+            for j, goal in enumerate(self._ensure_list(persona.get('goals', []))[:2]):
                 goal_item_y = goal_y + Inches(0.25 + (j * 0.25))
                 goal_item = slide.shapes.add_textbox(x + Inches(0.3), goal_item_y, width - Inches(0.5), Inches(0.25))
                 goal_item_frame = goal_item.text_frame
@@ -434,9 +442,9 @@ class PPTGenerator:
     
     def _add_questions_slide(self, slide, data: Dict, colors: Dict):
         """Q&A slide"""
-        questions = data.get('questions', [])
+        questions = self._ensure_list(data.get('questions', []))
         if not questions and isinstance(data, list):
-            questions = data
+            questions = self._ensure_list(data)
         
         if not questions:
             self._add_text_box(slide, "", "No questions data available", Inches(0.5), Inches(1.5), colors)
@@ -449,7 +457,7 @@ class PPTGenerator:
         y_left = y_start
         y_right = y_start
         
-        for i, q in enumerate(questions[:6]):  # Max 6 questions
+        for i, q in enumerate(self._ensure_list(questions)[:6]):  # Max 6 questions
             x = left_x if i % 2 == 0 else right_x
             y = y_left if i % 2 == 0 else y_right
             
@@ -486,9 +494,9 @@ class PPTGenerator:
             self._add_text_box(slide, "Market Overview:", data['marketOverview'][:200], Inches(0.5), Inches(1.3), colors)
         
         # Competitors table
-        competitors = data.get('competitors', [])
+        competitors = self._ensure_list(data.get('competitors', []))
         if competitors:
-            self._add_competitor_table(slide, competitors[:4], Inches(0.5), Inches(3.0), Inches(7), colors)
+            self._add_competitor_table(slide, self._ensure_list(competitors)[:4], Inches(0.5), Inches(3.0), Inches(7), colors)
         
         # TAM/SAM/SOM visualization
         if data.get('tam') or data.get('sam') or data.get('som'):
@@ -566,26 +574,27 @@ class PPTGenerator:
             
             # Strengths
             cell = table.cell(row, 1)
-            strengths = comp.get('strengths', [])
+            strengths = self._ensure_list(comp.get('strengths', []))
             cell.text = "\n".join([f"• {s[:30]}" for s in strengths[:2]])
             cell.text_frame.paragraphs[0].font.size = Pt(9)
             
             # Weaknesses
             cell = table.cell(row, 2)
-            weaknesses = comp.get('weaknesses', [])
+            weaknesses = self._ensure_list(comp.get('weaknesses', []))
             cell.text = "\n".join([f"• {w[:30]}" for w in weaknesses[:2]])
             cell.text_frame.paragraphs[0].font.size = Pt(9)
     
     def _add_prd_slide(self, slide, data: Dict, colors: Dict):
         """PRD slide with feature list"""
-        features = data.get('features', [])
+        features = self._ensure_list(data.get('features', []))
         if not features:
             # Try to extract from saved data
             if isinstance(data, dict):
                 for key in ['featureList', 'capabilities', 'requirements']:
-                    if key in data and isinstance(data[key], list):
-                        features = data[key]
-                        break
+                    if key in data:
+                        features = self._ensure_list(data[key])
+                        if features:
+                            break
         
         if not features:
             self._add_text_box(slide, "PRD Content", str(data)[:300], Inches(0.5), Inches(1.5), colors)
@@ -593,7 +602,7 @@ class PPTGenerator:
         
         # Feature list with priority indicators
         y_pos = 1.5
-        for i, feature in enumerate(features[:8]):  # Max 8 features
+        for i, feature in enumerate(self._ensure_list(features)[:8]):  # Max 8 features
             feature_text = feature.get('name', feature.get('title', str(feature)))[:60]
             priority = feature.get('priority', 'Medium')
             
@@ -634,9 +643,9 @@ class PPTGenerator:
         """User stories slide with RICE scores"""
         stories = []
         if isinstance(data, dict) and 'stories' in data:
-            stories = data['stories']
+            stories = self._ensure_list(data['stories'])
         elif isinstance(data, list):
-            stories = data
+            stories = self._ensure_list(data)
         
         if not stories:
             self._add_text_box(slide, "", "No user stories available", Inches(0.5), Inches(1.5), colors)
@@ -667,7 +676,7 @@ class PPTGenerator:
         table.columns[4].width = Inches(1)
         
         # Data rows
-        for i, story in enumerate(stories[:6]):
+        for i, story in enumerate(self._ensure_list(stories)[:6]):
             row = i + 1
             
             # ID
@@ -696,9 +705,9 @@ class PPTGenerator:
     
     def _add_roadmap_slide(self, slide, data: Dict, colors: Dict):
         """Roadmap slide with timeline"""
-        phases = data.get('phases', [])
+        phases = self._ensure_list(data.get('phases', []))
         if not phases and isinstance(data, list):
-            phases = data
+            phases = self._ensure_list(data)
         
         if not phases:
             self._add_text_box(slide, "", "No roadmap data available", Inches(0.5), Inches(1.5), colors)
@@ -707,7 +716,7 @@ class PPTGenerator:
         # Timeline visualization
         y_pos = 1.5
         
-        for i, phase in enumerate(phases[:4]):
+        for i, phase in enumerate(self._ensure_list(phases)[:4]):
             # Phase card
             card = slide.shapes.add_shape(
                 MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.5), Inches(y_pos), Inches(12), Inches(1.2)
@@ -749,11 +758,11 @@ class PPTGenerator:
                 dur_frame.paragraphs[0].font.color.rgb = colors["secondary"]
             
             # Milestones
-            milestones = phase.get('milestones', [])
+            milestones = self._ensure_list(phase.get('milestones', []))
             if milestones:
                 mile_box = slide.shapes.add_textbox(Inches(6), Inches(y_pos + 0.15), Inches(6), Inches(0.9))
                 mile_frame = mile_box.text_frame
-                mile_text = "Milestones:\n" + "\n".join([f"• {m[:40]}" for m in milestones[:3]])
+                mile_text = "Milestones:\n" + "\n".join([f"• {m[:40]}" for m in self._ensure_list(milestones)[:3]])
                 mile_frame.text = mile_text
                 mile_frame.paragraphs[0].font.size = Pt(10)
                 mile_frame.paragraphs[0].font.color.rgb = colors["text"]
@@ -762,7 +771,7 @@ class PPTGenerator:
     
     def _add_okrs_slide(self, slide, data: Dict, colors: Dict, include_charts: bool):
         """OKRs slide with progress visualization"""
-        okrs = [data.get('okr1'), data.get('okr2'), data.get('okr3')]
+        okrs = self._ensure_list([data.get('okr1'), data.get('okr2'), data.get('okr3')])
         okrs = [okr for okr in okrs if okr]
         
         if not okrs:
@@ -775,7 +784,7 @@ class PPTGenerator:
         
         y_pos = 2.4
         
-        for i, okr in enumerate(okrs[:3]):
+        for i, okr in enumerate(self._ensure_list(okrs)[:3]):
             # OKR card
             card = slide.shapes.add_shape(
                 MSO_SHAPE.ROUNDED_RECTANGLE, Inches(0.5), Inches(y_pos), Inches(12), Inches(1.3)
@@ -878,6 +887,9 @@ class PPTGenerator:
     
     def _add_bullet_list(self, slide, label: str, items: List[str], x, y, width, colors: Dict):
         """Add a bullet list"""
+        # Ensure items is a list
+        items = self._ensure_list(items)
+        
         if label:
             label_box = slide.shapes.add_textbox(x, y, width, Inches(0.3))
             label_frame = label_box.text_frame
