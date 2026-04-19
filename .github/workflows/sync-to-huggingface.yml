@@ -1,0 +1,30 @@
+name: Sync to Hugging Face Spaces
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Hugging Face Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "GitHub Actions Bot"
+          
+          # Add Hugging Face remote
+          git remote add huggingface https://user:$HF_TOKEN@huggingface.co/spaces/ashishsankhua/ppt-microservice
+          
+          # Push to Hugging Face (force push to sync)
+          git push huggingface main --force
+          
+          echo "✅ Successfully synced to Hugging Face Spaces"
