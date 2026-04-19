@@ -1,6 +1,6 @@
 """
-PPT Generation Microservice
-Generates professional PowerPoint presentations from structured data
+Generic PPT Generation Microservice
+Generates professional PowerPoint presentations from any JSON data
 """
 
 from fastapi import FastAPI, HTTPException
@@ -18,42 +18,20 @@ from ppt_generator import PPTGenerator
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def normalize_data(obj):
-    """Recursively normalize data - convert dicts with numeric keys to lists"""
-    if isinstance(obj, dict):
-        # Check if keys are numeric (indicating array serialized as object)
-        keys = list(obj.keys())
-        if keys and all(str(k).isdigit() for k in keys):
-            # Convert to list, sort by key
-            return [normalize_data(obj[k]) for k in sorted(keys, key=int)]
-        else:
-            # Regular dict - normalize values
-            return {k: normalize_data(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [normalize_data(item) for item in obj]
-    else:
-        return obj
-
 app = FastAPI(
-    title="PPT Generation Service",
-    description="Professional PowerPoint generation API",
-    version="2.0.0"
+    title="Generic PPT Generation Service",
+    description="Professional PowerPoint generation API - works with any JSON data",
+    version="3.0.0"
 )
 
 ppt_gen = PPTGenerator()
 
 # Data Models
-class StepData(BaseModel):
-    stepId: int
-    stepName: str
-    data: Dict[str, Any]
-
 class GenerateRequest(BaseModel):
     projectName: str
     projectDescription: Optional[str] = None
-    steps: List[StepData]
+    content: Any  # Accepts any JSON structure
     template: str = "professional"
-    includeCharts: bool = True
 
 class GenerateResponse(BaseModel):
     success: bool
@@ -67,8 +45,9 @@ def health_check():
 @app.get("/")
 def root():
     return {
-        "service": "PPT Generation Service",
-        "version": "2.0.0",
+        "service": "Generic PPT Generation Service",
+        "version": "3.0.0",
+        "description": "Generate presentations from any JSON data",
         "endpoints": ["/health", "/generate", "/templates"]
     }
 
@@ -87,28 +66,18 @@ def list_templates():
 def generate_presentation(request: GenerateRequest):
     try:
         logger.info(f"Generating PPT for: {request.projectName}")
+        logger.info(f"Content type: {type(request.content)}")
         
         # Generate unique filename
         file_id = str(uuid.uuid4())[:8]
         filename = f"{request.projectName.replace(' ', '_')}_{file_id}.pptx"
         output_path = os.path.join(tempfile.gettempdir(), filename)
         
-        # Convert Pydantic models to dicts and normalize (handle objects→arrays)
-        steps_data = [normalize_data(step.model_dump()) for step in request.steps]
-        
-        # Debug: Log steps data structure
-        logger.info(f"Steps count: {len(steps_data)}")
-        for i, step in enumerate(steps_data[:2]):
-            logger.info(f"Step {i}: type={type(step)}, keys={list(step.keys()) if isinstance(step, dict) else 'N/A'}")
-            if isinstance(step, dict) and 'data' in step:
-                data = step['data']
-                logger.info(f"  data type: {type(data)}, keys={list(data.keys())[:5] if isinstance(data, dict) else 'N/A'}")
-        
-        # Generate presentation
+        # Generate presentation from any content structure
         ppt_gen.create_presentation(
             project_name=request.projectName,
             project_description=request.projectDescription,
-            steps=steps_data,
+            content_data=request.content,
             template=request.template,
             output_path=output_path
         )
@@ -117,7 +86,7 @@ def generate_presentation(request: GenerateRequest):
         
         return GenerateResponse(
             success=True,
-            message=f"Presentation generated with {len(request.steps)} sections",
+            message="Presentation generated successfully",
             downloadUrl=f"/download/{filename}"
         )
         
@@ -125,7 +94,7 @@ def generate_presentation(request: GenerateRequest):
         import traceback
         logger.error(f"Generation failed: {str(e)}")
         logger.error(f"Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"{str(e)} - Check server logs for details")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/download/{filename}")
 def download_file(filename: str):
