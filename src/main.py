@@ -77,7 +77,7 @@ def generate_presentation(request: GenerateRequest):
         ppt_gen.create_presentation(
             project_name=request.projectName,
             project_description=request.projectDescription,
-            content_data=request.content,
+            steps=request.content,
             template=request.template,
             output_path=output_path
         )
