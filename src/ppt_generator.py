@@ -179,11 +179,20 @@ class PPTGenerator:
         # Header bar
         self._add_header_bar(slide, "Presentation Overview", colors, prs.slide_width)
         
-        # Agenda items
+        # Agenda items - ensure steps is a list
+        if isinstance(steps, dict):
+            steps = list(steps.values()) if steps else []
+        elif not isinstance(steps, list):
+            steps = []
+        
         y_pos = 1.8
         for i, step in enumerate(steps[:6]):  # Max 6 items
             step_num = i + 1
-            step_name = step.stepName if hasattr(step, 'stepName') else f"Step {step_num}"
+            # Handle both dict and object access
+            if isinstance(step, dict):
+                step_name = step.get('stepName', f"Step {step_num}")
+            else:
+                step_name = step.stepName if hasattr(step, 'stepName') else f"Step {step_num}"
             
             # Number circle
             circle = slide.shapes.add_shape(
@@ -213,9 +222,15 @@ class PPTGenerator:
     
     def _add_step_slide(self, prs: Presentation, step: Any, colors: Dict, include_charts: bool):
         """Add a content slide for a pipeline step"""
-        step_id = step.stepId if hasattr(step, 'stepId') else 0
-        step_name = step.stepName if hasattr(step, 'stepName') else "Step"
-        data = step.data if hasattr(step, 'data') else {}
+        # Handle both dict and object access
+        if isinstance(step, dict):
+            step_id = step.get('stepId', 0)
+            step_name = step.get('stepName', 'Step')
+            data = step.get('data', {})
+        else:
+            step_id = step.stepId if hasattr(step, 'stepId') else 0
+            step_name = step.stepName if hasattr(step, 'stepName') else "Step"
+            data = step.data if hasattr(step, 'data') else {}
         
         blank_slide_layout = prs.slide_layouts[6]
         slide = prs.slides.add_slide(blank_slide_layout)
