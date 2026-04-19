@@ -227,18 +227,24 @@ class PPTGenerator:
         y_pos = 1.3
         
         if data.get('problemTitle'):
-            self._add_text_box(slide, "Problem:", data['problemTitle'], 
+            problem = data['problemTitle']
+            if isinstance(problem, dict):
+                problem = str(problem)
+            self._add_text_box(slide, "Problem:", problem, 
                              Inches(0.5), Inches(y_pos), colors)
             y_pos += 1.0
         
         if data.get('reframedProblem'):
-            self._add_text_box(slide, "Reframed:", data['reframedProblem'],
+            reframed = data['reframedProblem']
+            if isinstance(reframed, dict):
+                reframed = str(reframed)
+            self._add_text_box(slide, "Reframed:", reframed,
                              Inches(0.5), Inches(y_pos), colors)
             y_pos += 1.2
         
         if data.get('rootCauses'):
-            items = data['rootCauses']
-            if isinstance(items, list):
+            items = self._ensure_list(data['rootCauses'])
+            if items:
                 self._add_bullet_list(slide, "Root Causes:", items[:5],
                                     Inches(0.5), Inches(y_pos), colors)
     
@@ -253,7 +259,10 @@ class PPTGenerator:
             box.line.color.rgb = colors["primary"]
             
             frame = box.text_frame
-            frame.text = data['visionStatement']
+            vision_text = data['visionStatement']
+            if isinstance(vision_text, dict):
+                vision_text = str(vision_text)
+            frame.text = vision_text
             frame.paragraphs[0].font.size = Pt(20)
             frame.paragraphs[0].font.italic = True
             frame.paragraphs[0].font.color.rgb = colors["primary"]
@@ -262,12 +271,18 @@ class PPTGenerator:
         
         y_pos = 2.8
         if data.get('elevatorPitch'):
-            self._add_text_box(slide, "Elevator Pitch:", data['elevatorPitch'],
+            pitch = data['elevatorPitch']
+            if isinstance(pitch, dict):
+                pitch = str(pitch)
+            self._add_text_box(slide, "Elevator Pitch:", pitch,
                              Inches(0.5), Inches(y_pos), colors)
             y_pos += 1.5
         
         if data.get('targetAudience'):
-            self._add_text_box(slide, "Target Audience:", data['targetAudience'],
+            audience = data['targetAudience']
+            if isinstance(audience, dict):
+                audience = str(audience)
+            self._add_text_box(slide, "Target Audience:", audience,
                              Inches(0.5), Inches(y_pos), colors)
     
     def _add_personas_slide(self, slide, data: Dict, colors: Dict):
@@ -356,8 +371,13 @@ class PPTGenerator:
     
     def _add_market_slide(self, slide, data: Dict, colors: Dict):
         """Market analysis slide"""
-        if data.get('marketOverview'):
-            overview = data['marketOverview'][:200]
+        market_overview = data.get('marketOverview')
+        if market_overview:
+            # Handle both string and dict input
+            if isinstance(market_overview, dict):
+                overview = str(market_overview)[:200]
+            else:
+                overview = str(market_overview)[:200]
             self._add_text_box(slide, "Market Overview:", overview,
                              Inches(0.5), Inches(1.3), colors)
         
