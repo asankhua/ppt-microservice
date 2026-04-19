@@ -27,6 +27,19 @@ class PPTGenerator:
             return []
         return [data]
     
+    @staticmethod
+    def _safe_str(data, max_len: int = 500) -> str:
+        """Safely convert any data to string, handling dicts"""
+        if isinstance(data, dict):
+            # Try to find a text field, otherwise stringify
+            for key in ['text', 'content', 'description', 'value', 'summary']:
+                if key in data:
+                    return str(data[key])[:max_len]
+            return str(data)[:max_len]
+        if data is None:
+            return ""
+        return str(data)[:max_len]
+    
     COLOR_SCHEMES = {
         "professional": {
             "primary": RGBColor(30, 64, 175),
@@ -327,7 +340,7 @@ class PPTGenerator:
         name_frame.paragraphs[0].font.color.rgb = colors["primary"]
         
         # Bio
-        bio = persona.get('bio', '')
+        bio = self._safe_str(persona.get('bio', ''), 150)
         if len(bio) > 150:
             bio = bio[:150] + "..."
         self._add_wrapped_text(slide, bio, x + Inches(0.2), y + Inches(0.8),
@@ -347,8 +360,8 @@ class PPTGenerator:
         
         y_pos = 1.3
         for i, q in enumerate(questions[:6]):
-            question = q.get('question', '')[:80]
-            answer = q.get('aiAnswer', q.get('userAnswer', ''))[:100]
+            question = self._safe_str(q.get('question', ''), 80)
+            answer = self._safe_str(q.get('aiAnswer', q.get('userAnswer', '')), 100)
             
             # Question
             q_box = slide.shapes.add_textbox(Inches(0.5), Inches(y_pos), Inches(12), Inches(0.4))
@@ -407,11 +420,11 @@ class PPTGenerator:
             
             strengths = self._ensure_list(comp.get('strengths', []))
             if strengths:
-                table.cell(row, 1).text = "\n".join([f"• {s[:40]}" for s in strengths[:2]])
+                table.cell(row, 1).text = "\n".join([f"• {self._safe_str(s, 40)}" for s in strengths[:2]])
             
             weaknesses = self._ensure_list(comp.get('weaknesses', []))
             if weaknesses:
-                table.cell(row, 2).text = "\n".join([f"• {w[:40]}" for w in weaknesses[:2]])
+                table.cell(row, 2).text = "\n".join([f"• {self._safe_str(w, 40)}" for w in weaknesses[:2]])
     
     def _add_features_slide(self, slide, data: Dict, colors: Dict):
         """PRD/Features slide"""
@@ -427,8 +440,8 @@ class PPTGenerator:
         
         y_pos = 1.5
         for feature in features[:8]:
-            name = feature.get('name', feature.get('title', str(feature)))[:60]
-            priority = feature.get('priority', 'Medium')
+            name = self._safe_str(feature.get('name', feature.get('title', str(feature))), 60)
+            priority = self._safe_str(feature.get('priority', 'Medium'), 20)
             
             # Priority badge
             badge = slide.shapes.add_shape(
@@ -494,7 +507,7 @@ class PPTGenerator:
             desc = story.get('description', '')
             if not desc and story.get('asA'):
                 desc = f"As a {story.get('asA')}, I want {story.get('iWant', '...')}"
-            table.cell(row, 1).text = desc[:80]
+            table.cell(row, 1).text = self._safe_str(desc, 80)
             
             table.cell(row, 2).text = str(story.get('priority', '-'))
             
@@ -608,7 +621,7 @@ class PPTGenerator:
         frame.paragraphs[0].font.color.rgb = colors["white"]
         frame.paragraphs[0].alignment = PP_ALIGN.CENTER
     
-    def _add_text_box(self, slide, label: str, content: str, x, y, colors: Dict):
+    def _add_text_box(self, slide, label: str, content, x, y, colors: Dict):
         """Add labeled text box"""
         if label:
             label_box = slide.shapes.add_textbox(x, y, Inches(12), Inches(0.3))
@@ -619,9 +632,12 @@ class PPTGenerator:
             label_frame.paragraphs[0].font.color.rgb = colors["primary"]
             y += Inches(0.35)
         
+        # Convert content to string safely
+        content = self._safe_str(content, 300)
+        
         content_box = slide.shapes.add_textbox(x, y, Inches(12), Inches(2))
         content_frame = content_box.text_frame
-        content_frame.text = content[:300]
+        content_frame.text = content
         content_frame.paragraphs[0].font.size = Pt(12)
         content_frame.paragraphs[0].font.color.rgb = colors["text"]
         content_frame.word_wrap = True
@@ -641,7 +657,7 @@ class PPTGenerator:
             label_frame.paragraphs[0].font.color.rgb = colors["primary"]
             y += Inches(0.35)
         
-        bullet_text = "\n".join([f"• {str(item)[:60]}" for item in items[:5]])
+        bullet_text = "\n".join([f"• {self._safe_str(item, 60)}" for item in items[:5]])
         bullet_box = slide.shapes.add_textbox(x, y, Inches(12), Inches(2))
         bullet_frame = bullet_box.text_frame
         bullet_frame.text = bullet_text
@@ -657,7 +673,7 @@ class PPTGenerator:
         frame.paragraphs[0].font.color.rgb = color
         frame.word_wrap = True
     
-    def _add_info_card(self, slide, title: str, content: str, x, y, width, height, colors: Dict):
+    def _add_info_card(self, slide, title: str, content, x, y, width, height, colors: Dict):
         """Add info card"""
         card = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, x, y, width, height)
         card.fill.solid()
@@ -672,9 +688,12 @@ class PPTGenerator:
         title_frame.paragraphs[0].font.bold = True
         title_frame.paragraphs[0].font.color.rgb = colors["primary"]
         
+        # Convert content to string safely
+        content = self._safe_str(content, 200)
+        
         content_box = slide.shapes.add_textbox(x + Inches(0.1), y + Inches(0.35),
                                               width - Inches(0.2), height - Inches(0.4))
         content_frame = content_box.text_frame
-        content_frame.text = content[:200]
+        content_frame.text = content
         content_frame.paragraphs[0].font.size = Pt(10)
         content_frame.word_wrap = True
