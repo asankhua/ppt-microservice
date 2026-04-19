@@ -89,6 +89,8 @@ class PPTGenerator:
         preview_mode: bool = False
     ):
         """Create a complete presentation"""
+        # Ensure steps is a list
+        steps = self._ensure_list(steps)
         
         colors = self.COLOR_SCHEMES.get(template, self.COLOR_SCHEMES["professional"])
         prs = Presentation()
